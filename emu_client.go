@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	MyDB = "iwm"
+	MyDB = "test"
 )
 
 
