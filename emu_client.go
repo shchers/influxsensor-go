@@ -33,6 +33,10 @@ func main() {
 	conf.Username = *username
 	conf.Password = *password
 
+	send_data(conf, dbname)
+}
+
+func send_data(conf client.HTTPConfig, dbname *string) {
 	// Create a new HTTPClient
 	c, err := client.NewHTTPClient(conf)
 	if err != nil {
