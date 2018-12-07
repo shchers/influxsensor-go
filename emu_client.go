@@ -4,18 +4,37 @@ import (
 	"log"
 	"time"
 	"math/rand"
+	"flag"
 
 	"github.com/influxdata/influxdb/client/v2"
 )
 
-const (
-	MyDB = "test"
-)
-
-
 func main() {
+	// Influxdb configuration descriptor
+	var conf client.HTTPConfig
+	// Intermediate variables for scanning command line
+	// * Configuration properties for db connection
+	var addr, username, password *string
+	// * Database properties
+	var dbname *string
+
+	addr = flag.String("a", "http://localhost:8086", "Influxdb server address")
+	username = flag.String("u", "", "Influxdb server authorized user name")
+	password = flag.String("p", "", "Password for Influxdb server authorization")
+	dbname = flag.String("d", "test", "Influxdb database name")
+
+	flag.Parse()
+
+	if *password != "" && *username == "" {
+		log.Fatal("Password defined without username")
+	}
+
+	conf.Addr = *addr
+	conf.Username = *username
+	conf.Password = *password
+
 	// Create a new HTTPClient
-	c, err := client.NewHTTPClient(client.HTTPConfig{ Addr: "http://localhost:8086" })
+	c, err := client.NewHTTPClient(conf)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -23,7 +42,7 @@ func main() {
 
 	// Create a new point batch
 	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
-		Database:  MyDB,
+		Database:  *dbname,
 		Precision: "s",
 	})
 	if err != nil {
