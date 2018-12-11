@@ -7,9 +7,10 @@ import (
 	"flag"
 	"io/ioutil"
 	"strings"
+	"regexp"
+	"strconv"
 
 	"github.com/influxdata/influxdb/client/v2"
-	dht "github.com/shchers/go-dht"
 )
 
 func main() {
@@ -24,16 +25,13 @@ func main() {
 	var nFrames int
 	// Delay between frames
 	var delaySec int
-	// GPIO number
-	var gpio int
 
 	addr = flag.String("a", "http://localhost:8086", "Influxdb server address")
 	username = flag.String("u", "", "Influxdb server authorized user name")
 	password = flag.String("p", "", "Password for Influxdb server authorization")
 	dbname = flag.String("d", "test", "Influxdb database name")
-	flag.IntVar(&nFrames, "n", 1, "Number of frames to be sent or 0 for infinity")
+	flag.IntVar(&nFrames, "n", 0, "Number of frames to be sent or 0 for infinity")
 	flag.IntVar(&delaySec, "i", 15, "Delay between frames, sec")
-	flag.IntVar(&gpio, "g", 4, "GPIO that used as a sensor input");
 
 	flag.Parse()
 
@@ -54,18 +52,32 @@ func main() {
 	conf.Password = *password
 
 	for i := 0; nFrames == 0 || i < nFrames; i++ {
-		send_data(conf, dbname, gpio)
+		send_data(conf, dbname)
 		if nFrames > 1 {
 			time.Sleep(time.Duration(delaySec) * time.Second)
 		}
 	}
 }
 
-func send_data(conf client.HTTPConfig, dbname *string, gpio int) {
+func send_data(conf client.HTTPConfig, dbname *string) {
 	// Read sensor data
-	temperature, humidity, err := dht.ReadDHTxx(dht.AM2301, gpio, false)
+	data := ReadDHTxx("/proc/am2301")
+	if len(data) != 3 {
+		return
+	}
+
+	if data[2] != "ok" {
+		return
+	}
+
+	humidity, err := strconv.ParseFloat(data[0], 32)
 	if err != nil {
-		log.Fatal(err)
+		return
+	}
+
+	temperature, err := strconv.ParseFloat(data[1], 32)
+	if err != nil {
+		return
 	}
 
 	// Create a new HTTPClient
@@ -114,6 +126,13 @@ func send_data(conf client.HTTPConfig, dbname *string, gpio int) {
 	if err := c.Close(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func ReadDHTxx(path string) []string {
+	dat, _ := ioutil.ReadFile(path)
+	value := strings.TrimSpace(string(dat))
+	re := regexp.MustCompile(";")
+	return re.Split(value, -1)
 }
 
 func getBoardSN() string {
