@@ -75,8 +75,8 @@ func send_data(conf client.HTTPConfig, dbname *string) {
 	// Create a point and add to batch
 	tags := map[string]string{
 		"client_id": "emu123",
-		"temp": "yes",
-		"hum" : "yes",
+		"temp_enabled": "yes",
+		"hum_enabled" : "yes",
 	}
 
 	// w/a for SW randinm generator
